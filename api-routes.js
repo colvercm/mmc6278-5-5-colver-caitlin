@@ -19,10 +19,10 @@ const db = require('./db')
 
 router
   .route('/inventory')
-  .get(async (req, res) => {
+  .get(async (_req, res) => {
     try {
       const [inventory] = await db.query(`SELECT * FROM inventory`);
-      res.json.status(204).end();
+      res.json(inventory).status(204).end();
   } catch (err) {
       res.status(404).send('Error Retrieving Inventory: ' + err.message);
     }
@@ -43,17 +43,18 @@ router
         image&& 
         description
       ))
-      return 
-        res.status(204).send('inventory item added')
+      return res
+      .status(204)
+      .send('inventory item added')
   
         await db.query(`
           INSERT INTO inventory (price, quantity, name, image, description)
           VALUES (?, ?, ?, ?, ?)
           `, [price, quantity, name, image, description])
 
-        res.status(204).end();
+        res.status(204).send('item added');
       } catch (err) {
-        res.status(404).send('Error retrieving inventory')  
+        res.status(404).send('Error retrieving item: ' + err.message)  
   }
 })
 // TODO: Write a GET route that returns a single item from the inventory
@@ -71,11 +72,17 @@ router
   router
   .route('/inventory/:id')
   .get(async (req, res) => {
-    const [[singleItem]] = await db.query(`SELECT * FROM inventory WHERE id=?`,
-    [req.params.id]);
-    if(!singleItem)
-      return res.status(404).send(`Item Not Found`)
-  })
+    try{
+      const [[singleItem]] = await db.query(
+        `SELECT * FROM inventory WHERE id =?`, req.params.id);
+
+      if(!singleItem)
+        return res.status(404).send(`Item Not Found`)
+        res.json(singleItem)
+   } catch (err) {
+      res.status(404).send('Item not found: ' + err.message)
+  }
+})
 
   // TODO: Create a PUT route that updates the inventory table based on the id
   // in the route parameter.
@@ -87,7 +94,7 @@ router
     const { price, quantity, name, description, image} = req.body
     const [{affectedRows}] = await db.query(
       `UPDATE inventory SET ? WHERE id =?`,
-    [{price, quantity, name, description, image }, req.params.id]
+    [{ price, quantity, name, description, image }, req.params.id]
     )
     if (affectedRows === 0) return res.status(404).send('item not found')
     else return res.status(204).end()
@@ -104,9 +111,9 @@ router
         req.params.id
         )
         if (affectedRows === 0) return res.status(404).send('item not found')
-        res.send('Item deleted')
-      }catch(err) {
-        res.status(204).end()
+        res.sendStatus(204).send('Item deleted')
+      } catch(err) {
+        res.status(204).send('Unable to delete item: ' + err.message)
       }
     })
 
